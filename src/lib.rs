@@ -4,7 +4,8 @@ extern crate nalgebra as na;
 
 use na::{Vector1, Vector2, Vector3, Vector4, Vector6, Matrix};
 
-// Implemented manifold types
+/// Implemented manifold types
+
 struct SO2<T> {
     w: T,
     x: T,
@@ -22,10 +23,8 @@ struct SE3<T> {
     q: SO3<T>,
 }
 
-// Shared manifold traits
-// TODO
+/// SO2 implementation
 
-// SO2-specific methods
 impl<T> SO2<T> {
     fn w(&self) -> &T {
         &self.w
