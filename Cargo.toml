@@ -1,0 +1,16 @@
+[package]
+name = "manif-geom-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Rust implementation of the SO(2), SE(2), SO(3), and SE(3) representations in manif-geom-cpp."
+repository = "https://github.com/goromal/manif-geom-rs"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "manif_geom_rs"
+path = "src/lib.rs"
+
+[dependencies]
+nalgebra = "0.32.2"
