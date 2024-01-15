@@ -5,6 +5,8 @@ use na::{Scalar, Unit, Vector1, Vector2, Vector3, Vector4, Vector6, Matrix2};
 
 /// SO2 implementation
 
+pub mod so2 {
+
 struct SO2<T: Scalar + na::ComplexField> {
     arr: Unit<Vector2<T>>, // w, x
 }
@@ -62,3 +64,5 @@ mod test {
         assert!(q.x().abs() < EPSILON);
     }
 }
+
+} // end so2
