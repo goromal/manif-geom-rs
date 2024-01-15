@@ -9,8 +9,8 @@ use rand::distributions::{Distribution, Standard};
 extern crate nalgebra as na;
 use na::{Scalar, Unit, Vector1, Vector2, Vector3, Vector4, Vector6, Matrix2};
 
-/// Implemented manifold types : Float + na::ComplexField
 /*
+Implemented manifold types : Float + na::ComplexField
 struct SE2<T: Scalar + na::ComplexField> {
     t: Vector2<T>,
     q: SO2<T>,
