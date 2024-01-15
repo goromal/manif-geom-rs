@@ -2,16 +2,15 @@
 
 // use num_traits::Float; TODO remove?
 
+mod so2;
+
 use rand::distributions::{Distribution, Standard};
 
 extern crate nalgebra as na;
 use na::{Scalar, Unit, Vector1, Vector2, Vector3, Vector4, Vector6, Matrix2};
 
 /// Implemented manifold types : Float + na::ComplexField
-
-struct SO2<T: Scalar + na::ComplexField> {
-    arr: Unit<Vector2<T>>, // w, x
-}
+/*
 struct SE2<T: Scalar + na::ComplexField> {
     t: Vector2<T>,
     q: SO2<T>,
@@ -23,8 +22,12 @@ struct SE3<T: Scalar + na::ComplexField> {
     t: Vector3<T>,
     q: SO3<T>,
 }
-
+*/
 /// SO2 implementation
+
+struct SO2<T: Scalar + na::ComplexField> {
+    arr: Unit<Vector2<T>>, // w, x
+}
 
 impl<T: Scalar + na::ComplexField> SO2<T> {
     pub fn random() -> SO2<T> 
