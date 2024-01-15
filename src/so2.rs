@@ -47,7 +47,7 @@ impl<T: Scalar + na::ComplexField> SO2<T> {
     // ...
 }
 
-// Tests
+// Unit Tests
 #[cfg(test)]
 mod test {
     use super::*;
