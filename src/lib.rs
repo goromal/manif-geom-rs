@@ -4,10 +4,10 @@
 
 mod so2;
 
-use rand::distributions::{Distribution, Standard};
+// use rand::distributions::{Distribution, Standard};
 
 extern crate nalgebra as na;
-use na::{Scalar, Unit, Vector1, Vector2, Vector3, Vector4, Vector6, Matrix2};
+// use na::{Scalar, Unit, Vector1, Vector2, Vector3, Vector4, Vector6, Matrix2};
 
 /*
 Implemented manifold types : Float + na::ComplexField
