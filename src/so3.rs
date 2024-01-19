@@ -30,7 +30,7 @@ impl<T: na::Scalar + na::ComplexField> SO3<T> {
         return &self.arr[(3, 0)]
     }
     pub fn fromAxisAngle(axis: na::Vector3<T>, angle: T) -> SO3<T> {
-        let th2: T = angle / T::new(2.0);
+        let th2: T = angle / T::two();
         let xyz: na::Vector3<T> = (th2.clone().sin() / (axis.norm() as T)) * axis;
         let q_arr: na::Unit<na::Vector4<T>> = na::Unit::new_normalize(na::Vector4::new(
             th2.clone().cos(),
@@ -46,13 +46,13 @@ impl<T: na::Scalar + na::ComplexField> SO3<T> {
         return q_euler
     }
     pub fn roll(&self) -> T {
-        (1.0 - 2.0 * (self.x() * self.x() + self.y() * self.y())).atan2(2.0 * (self.w() * self.x() + self.y() * self.z()))
+        (T::one() - T::two() * (self.x() * self.x() + self.y() * self.y())).atan2(T::two() * (self.w() * self.x() + self.y() * self.z()))
     }
     pub fn pitch(&self) -> T {
-        let val: T = 2.0 * (self.w() * self.y() - self.x() * self.z());
+        let val: T = T::two() * (self.w() * self.y() - self.x() * self.z());
         // hold at 90 degrees if invalid
-        if val.abs() > 1.0 {
-            return (1.0).copysign(val) * f64::PI / 2.0;
+        if val.abs() > T::one() {
+            return (1.0_f64).copysign(val) * f64::PI / T::two();
         }
         else {
             return val.asin();
