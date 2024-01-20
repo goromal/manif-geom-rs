@@ -47,7 +47,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField> SO2<T> {
         &self.arr[(1, 0)]
     }
     pub fn angle(&self) -> T {
-        self.w().clone().atan2(self.x().clone())
+        self.x().clone().atan2(self.w().clone())
     }
     // array
     // copy

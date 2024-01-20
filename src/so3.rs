@@ -54,7 +54,7 @@ impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> SO3<T> where 
         let y: T = self.y().clone();
         let z: T = self.z().clone();
         let w: T = self.w().clone();
-        (T::one() - (x.clone() * x.clone() + y.clone() * y.clone()) * na::convert(2.0)).atan2((w.clone() * x.clone() + y.clone() * z.clone()) * na::convert(2.0))
+        ((w.clone() * x.clone() + y.clone() * z.clone()) * na::convert(2.0)).atan2(T::one() - (x.clone() * x.clone() + y.clone() * y.clone()) * na::convert(2.0))
     }
     pub fn pitch(&self) -> T {
         let x: T = self.x().clone();
@@ -75,7 +75,7 @@ impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> SO3<T> where 
         let y: T = self.y().clone();
         let z: T = self.z().clone();
         let w: T = self.w().clone();
-        (T::one() - (y.clone() * y.clone() + z.clone() * z.clone()) * na::convert(2.0)).atan2((w.clone() * z.clone() + x.clone() * y.clone()) * na::convert(2.0))
+        ((w.clone() * z.clone() + x.clone() * y.clone()) * na::convert(2.0)).atan2(T::one() - (y.clone() * y.clone() + z.clone() * z.clone()) * na::convert(2.0))
     }
     pub fn otimes(&self, q: SO3<T>) -> SO3<T> {
         let self_x: T = self.x().clone();
