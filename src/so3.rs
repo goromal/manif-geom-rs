@@ -13,7 +13,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField> Default for SO3<T> {
     }
 }
 
-impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> SO3<T> where &'b T: Mul<&'a T, Output = T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField> SO3<T> {
     pub fn new(q: na::Unit<na::Vector4<T>>) -> SO3<T> {
         Self { arr: q }
     }
@@ -29,7 +29,7 @@ impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> SO3<T> where 
     pub fn z(&self) -> &T {
         &self.arr[(3, 0)]
     }
-    pub fn fromAxisAngle(axis: &na::Vector3<T>, angle: &T) -> SO3<T> {
+    pub fn from_axis_angle(axis: &na::Vector3<T>, angle: &T) -> SO3<T> {
         let angle_scale: T = T::one() / na::convert(2.0);
         let th2: T = angle_scale * angle.clone();
         let axis_normalized: na::Vector3<T> = axis.normalize();
@@ -42,10 +42,10 @@ impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> SO3<T> where 
         ));
         SO3{ arr: q_arr }
     }
-    pub fn fromEuler(roll: &T, pitch: &T, yaw: &T) -> SO3<T> {
-        let q_roll: SO3<T> = SO3::fromAxisAngle(&na::Vector3::x(), roll);
-        let q_pitch: SO3<T> = SO3::fromAxisAngle(&na::Vector3::y(), pitch);
-        let q_yaw: SO3<T> = SO3::fromAxisAngle(&na::Vector3::z(), yaw);
+    pub fn from_euler(roll: &T, pitch: &T, yaw: &T) -> SO3<T> {
+        let q_roll: SO3<T> = SO3::from_axis_angle(&na::Vector3::x(), roll);
+        let q_pitch: SO3<T> = SO3::from_axis_angle(&na::Vector3::y(), pitch);
+        let q_yaw: SO3<T> = SO3::from_axis_angle(&na::Vector3::z(), yaw);
         let q_euler: SO3<T> = q_yaw * q_pitch * q_roll;
         q_euler
     }
@@ -95,9 +95,39 @@ impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> SO3<T> where 
     }
 }
 
-impl<'a, 'b: 'a, T: na::Scalar + na::ComplexField + na::RealField> Mul for SO3<T> where &'b T: Mul<&'a T, Output = T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField> Mul<SO3<T>> for SO3<T> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         self.otimes(rhs)
+    }
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField> Mul<na::Vector3<T>> for SO3<T> {
+    type Output = na::Vector3<T>;
+    fn mul(self, rhs: na::Vector3<T>) -> na::Vector3<T> {
+        let vx: T = rhs[0].clone();
+        let vy: T = rhs[1].clone();
+        let vz: T = rhs[2].clone();
+        let qxx: T = self.x().clone() * self.x().clone();
+        let qxy: T = self.x().clone() * self.y().clone();
+        let qxz: T = self.x().clone() * self.z().clone();
+        let qyy: T = self.y().clone() * self.y().clone();
+        let qyz: T = self.y().clone() * self.z().clone();
+        let qzz: T = self.z().clone() * self.z().clone();
+        let qwx: T = self.w().clone() * self.x().clone();
+        let qwy: T = self.w().clone() * self.y().clone();
+        let qwz: T = self.w().clone() * self.z().clone();
+
+        na::Vector3::new(
+            (T::one() - qyy.clone() * na::convert(2.0) - qzz.clone() * na::convert(2.0)) * vx.clone() +
+            (qxy.clone() * na::convert(2.0) - qwz.clone() * na::convert(2.0)) * vy.clone() +
+            (qxz.clone() + qwy.clone()) * na::convert(2.0) * vz.clone(),
+            (qxy.clone() + qwz.clone()) * na::convert(2.0) * vx.clone() +
+            (T::one() - (qxx.clone() + qzz.clone()) * na::convert(2.0)) * vy.clone() +
+            (qyz.clone() - qwx.clone()) * na::convert(2.0) * vz.clone(),
+            (qxz.clone() - qwy.clone()) * na::convert(2.0) * vx.clone() +
+            (qyz.clone() + qwx.clone()) * na::convert(2.0) * vy.clone() +
+            (T::one() - (qxx.clone() + qyy.clone()) * na::convert(2.0)) * vz.clone(),
+        )
     }
 }
