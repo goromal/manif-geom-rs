@@ -1,0 +1,116 @@
+extern crate nalgebra as na;
+use std::ops::Mul;
+
+#[path = "so3.rs"] mod so3;
+
+/// SO2 implementation
+
+pub struct SO2<T: na::Scalar + na::ComplexField + na::RealField> {
+    arr: na::Unit<na::Vector2<T>>, // w, x
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField> Default for SO2<T> {
+    fn default() -> Self {
+        Self { arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))) }
+    }
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField> SO2<T> {
+    pub fn new(q: na::Unit<na::Vector2<T>>) -> SO2<T> {
+        Self { arr: q }
+    }
+    pub fn random() -> SO2<T> 
+    where rand::distributions::Standard: rand::distributions::Distribution<T>, {
+        SO2{ arr: na::Unit::new_normalize(na::Vector2::new_random()) }
+    }
+    pub fn identity() -> SO2<T> {
+        SO2{ arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))) }
+    }
+    pub fn from_angle(angle: &T) -> SO2<T> {
+        let c: T = angle.clone().cos();
+        let s: T = angle.clone().sin();
+        SO2 { arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))) }
+    }
+    pub fn from_rot_mat(m: &na::Matrix2<T>) -> SO2<T> {
+        SO2 { arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)].clone(), m[(1, 0)].clone())) }
+    }
+    // fromTwoUnitVectors
+    pub fn from_complex(qw: T, qx: T) -> SO2<T> {
+        SO2{ arr: na::Unit::new_normalize(na::Vector2::new(qw, qx)) }
+    }
+    pub fn w(&self) -> &T {
+        &self.arr[(0, 0)]
+    }
+    pub fn x(&self) -> &T {
+        &self.arr[(1, 0)]
+    }
+    pub fn angle(&self) -> T {
+        self.x().clone().atan2(self.w().clone())
+    }
+    // array
+    // copy
+    // R
+    // inverse
+    // invert
+    // angle
+    // otimes
+    // ...
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField> Mul<na::Vector2<T>> for SO2<T> {
+    type Output = na::Vector2<T>;
+    fn mul(self, rhs: na::Vector2<T>) -> na::Vector2<T> {
+        let self_x: T = self.x().clone();
+        let self_w: T = self.w().clone();
+        let v_x: T = rhs[0].clone();
+        let v_y: T = rhs[1].clone();
+        na::Vector2::new(
+            self_w.clone() * v_x.clone() - self_x.clone() * v_y.clone(),
+            self_w.clone() * v_y.clone() + self_x.clone() * v_x.clone(),
+        )
+    }
+}
+
+// Unit Tests
+#[cfg(test)]
+mod test {
+    use super::*;
+    use na::{Vector1, Vector2, Vector3, Vector4, Vector6, Matrix};
+    use so3::SO3;
+
+    static EPSILON: f64 = 0.000001;
+
+    #[test]
+    fn test_action() {
+        let num_tests = 1000;
+        let mut i = 0;
+        while i < num_tests {
+            let q_so2: SO2<f64> = SO2::random();
+            let v2: Vector2<f64> = Vector2::new_random();
+            let mut v3: Vector3<f64> = Vector3::identity();
+            v3[0] = v2[0];
+            v3[1] = v2[1];
+            let q_so3: SO3<f64> = SO3::from_euler(&0.0, &0.0, &q_so2.angle());
+
+            assert!(q_so3.roll().abs() < EPSILON);
+            assert!(q_so3.pitch().abs() < EPSILON);
+            assert!((&q_so3.yaw() - q_so2.angle()).abs() < EPSILON);
+
+            let qv2: Vector2<f64> = q_so2 * v2;
+            let qv3: Vector3<f64> = q_so3 * v3;
+
+            assert!((qv2[0] - qv3[0]).abs() < EPSILON);
+            assert!((qv2[1] - qv3[1]).abs() < EPSILON);
+            i = i + 1;
+        }
+    }
+
+    #[test]
+    fn test_so2_getters_tmp() {
+        // let q: SO2<f64> = SO2::from_complex(1.0, 0.0);
+        let q: SO2<f64> = SO2::identity();
+        assert!((q.w() - 1.0).abs() < EPSILON);
+        assert!(q.x().abs() < EPSILON);
+    }
+}
+

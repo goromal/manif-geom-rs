@@ -13,4 +13,6 @@ name = "manif_geom_rs"
 path = "src/lib.rs"
 
 [dependencies]
-nalgebra = "0.32.2"
+num-traits = "0.2"
+rand = "0.8.5"
+nalgebra = { version = "0.32.2", features = ["rand"] }
