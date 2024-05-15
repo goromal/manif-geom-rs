@@ -47,10 +47,20 @@ impl<T: na::Scalar + na::ComplexField + na::RealField> SO2<T> {
     pub fn angle(&self) -> T {
         self.x().clone().atan2(self.w().clone())
     }
-    // array
-    // copy
-    // R
-    // inverse
+    pub fn array(&self) -> na::Unit<na::Vector2<T>> {
+        self.arr.clone()
+    }
+    pub fn copy(&self) -> SO2<T> {
+        SO2{ arr: self.arr.clone() }
+    }
+    pub fn R(&self) -> na::Matrix2<T> {
+        let c: T = self.w().clone();
+        let s: T = self.x().clone();
+        na::Matrix2::new(c.clone(), -s.clone(), s, c)
+    }
+    pub fn inverse(&self) -> SO2<T> {
+        SO2::from_complex(self.w().clone(), -self.x().clone())
+    }
     // invert
     // angle
     // otimes
