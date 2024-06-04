@@ -5,17 +5,17 @@ use std::ops::Mul;
 
 /// SO2 implementation
 
-pub struct SO2<T: na::Scalar + na::ComplexField + na::RealField> {
+pub struct SO2<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
     arr: na::Unit<na::Vector2<T>>, // w, x
 }
 
-impl<T: na::Scalar + na::ComplexField + na::RealField> Default for SO2<T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Default for SO2<T> {
     fn default() -> Self {
         Self { arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))) }
     }
 }
 
-impl<T: na::Scalar + na::ComplexField + na::RealField> SO2<T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     pub fn new(q: na::Unit<na::Vector2<T>>) -> SO2<T> {
         Self { arr: q }
     }
@@ -27,39 +27,39 @@ impl<T: na::Scalar + na::ComplexField + na::RealField> SO2<T> {
         SO2{ arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))) }
     }
     pub fn from_angle(angle: &T) -> SO2<T> {
-        let c: T = angle.clone().cos();
-        let s: T = angle.clone().sin();
+        let c: T = angle.cos();
+        let s: T = angle.sin();
         SO2 { arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))) }
     }
     pub fn from_rot_mat(m: &na::Matrix2<T>) -> SO2<T> {
-        SO2 { arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)].clone(), m[(1, 0)].clone())) }
+        SO2 { arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)], m[(1, 0)])) }
     }
     // fromTwoUnitVectors
     pub fn from_complex(qw: T, qx: T) -> SO2<T> {
         SO2{ arr: na::Unit::new_normalize(na::Vector2::new(qw, qx)) }
     }
-    pub fn w(&self) -> &T {
-        &self.arr[(0, 0)]
+    pub fn w(&self) -> T {
+        self.arr[(0, 0)]
     }
-    pub fn x(&self) -> &T {
-        &self.arr[(1, 0)]
+    pub fn x(&self) -> T {
+        self.arr[(1, 0)]
     }
     pub fn angle(&self) -> T {
-        self.x().clone().atan2(self.w().clone())
+        self.x().atan2(self.w())
     }
     pub fn array(&self) -> na::Unit<na::Vector2<T>> {
-        self.arr.clone()
+        self.arr
     }
     pub fn copy(&self) -> SO2<T> {
-        SO2{ arr: self.arr.clone() }
+        SO2{ arr: self.arr }
     }
     pub fn R(&self) -> na::Matrix2<T> {
-        let c: T = self.w().clone();
-        let s: T = self.x().clone();
-        na::Matrix2::new(c.clone(), -s.clone(), s, c)
+        let c: T = self.w();
+        let s: T = self.x();
+        na::Matrix2::new(c, -s, s, c)
     }
     pub fn inverse(&self) -> SO2<T> {
-        SO2::from_complex(self.w().clone(), -self.x().clone())
+        SO2::from_complex(self.w(), -self.x())
     }
     // invert
     // angle
@@ -67,16 +67,16 @@ impl<T: na::Scalar + na::ComplexField + na::RealField> SO2<T> {
     // ...
 }
 
-impl<T: na::Scalar + na::ComplexField + na::RealField> Mul<na::Vector2<T>> for SO2<T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<na::Vector2<T>> for SO2<T> {
     type Output = na::Vector2<T>;
     fn mul(self, rhs: na::Vector2<T>) -> na::Vector2<T> {
-        let self_x: T = self.x().clone();
-        let self_w: T = self.w().clone();
-        let v_x: T = rhs[0].clone();
-        let v_y: T = rhs[1].clone();
+        let self_x: T = self.x();
+        let self_w: T = self.w();
+        let v_x: T = rhs[0];
+        let v_y: T = rhs[1];
         na::Vector2::new(
-            self_w.clone() * v_x.clone() - self_x.clone() * v_y.clone(),
-            self_w.clone() * v_y.clone() + self_x.clone() * v_x.clone(),
+            self_w * v_x - self_x * v_y,
+            self_w * v_y + self_x * v_x,
         )
     }
 }
