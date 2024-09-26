@@ -1,7 +1,8 @@
 extern crate nalgebra as na;
 use std::ops::Mul;
 
-#[path = "so3.rs"] mod so3;
+#[path = "so3.rs"]
+mod so3;
 
 /// SO2 implementation
 
@@ -11,7 +12,9 @@ pub struct SO2<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Default for SO2<T> {
     fn default() -> Self {
-        Self { arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))) }
+        Self {
+            arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))),
+        }
     }
 }
 
@@ -19,24 +22,36 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     pub fn new(q: na::Unit<na::Vector2<T>>) -> SO2<T> {
         Self { arr: q }
     }
-    pub fn random() -> SO2<T> 
-    where rand::distributions::Standard: rand::distributions::Distribution<T>, {
-        SO2{ arr: na::Unit::new_normalize(na::Vector2::new_random()) }
+    pub fn random() -> SO2<T>
+    where
+        rand::distributions::Standard: rand::distributions::Distribution<T>,
+    {
+        SO2 {
+            arr: na::Unit::new_normalize(na::Vector2::new_random()),
+        }
     }
     pub fn identity() -> SO2<T> {
-        SO2{ arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))) }
+        SO2 {
+            arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))),
+        }
     }
     pub fn from_angle(angle: &T) -> SO2<T> {
         let c: T = angle.cos();
         let s: T = angle.sin();
-        SO2 { arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))) }
+        SO2 {
+            arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))),
+        }
     }
     pub fn from_rot_mat(m: &na::Matrix2<T>) -> SO2<T> {
-        SO2 { arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)], m[(1, 0)])) }
+        SO2 {
+            arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)], m[(1, 0)])),
+        }
     }
     // fromTwoUnitVectors
     pub fn from_complex(qw: T, qx: T) -> SO2<T> {
-        SO2{ arr: na::Unit::new_normalize(na::Vector2::new(qw, qx)) }
+        SO2 {
+            arr: na::Unit::new_normalize(na::Vector2::new(qw, qx)),
+        }
     }
     pub fn w(&self) -> T {
         self.arr[(0, 0)]
@@ -51,7 +66,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         self.arr
     }
     pub fn copy(&self) -> SO2<T> {
-        SO2{ arr: self.arr }
+        SO2 { arr: self.arr }
     }
     pub fn R(&self) -> na::Matrix2<T> {
         let c: T = self.w();
@@ -74,10 +89,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<na::Vector2<T>
         let self_w: T = self.w();
         let v_x: T = rhs[0];
         let v_y: T = rhs[1];
-        na::Vector2::new(
-            self_w * v_x - self_x * v_y,
-            self_w * v_y + self_x * v_x,
-        )
+        na::Vector2::new(self_w * v_x - self_x * v_y, self_w * v_y + self_x * v_x)
     }
 }
 
@@ -85,7 +97,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<na::Vector2<T>
 #[cfg(test)]
 mod test {
     use super::*;
-    use na::{Vector1, Vector2, Vector3, Vector4, Vector6, Matrix};
+    use na::{Matrix, Vector1, Vector2, Vector3, Vector4, Vector6};
     use so3::SO3;
 
     static EPSILON: f64 = 0.000001;
@@ -123,4 +135,3 @@ mod test {
         assert!(q.x().abs() < EPSILON);
     }
 }
-

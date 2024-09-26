@@ -9,7 +9,14 @@ pub struct SO3<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Default for SO3<T> {
     fn default() -> Self {
-        Self { arr: na::Unit::new_unchecked(na::Vector4::new(na::convert(1.0), na::convert(0.0), na::convert(0.0), na::convert(0.0))) }
+        Self {
+            arr: na::Unit::new_unchecked(na::Vector4::new(
+                na::convert(1.0),
+                na::convert(0.0),
+                na::convert(0.0),
+                na::convert(0.0),
+            )),
+        }
     }
 }
 
@@ -38,9 +45,9 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
             th2.cos(),
             scale * axis_normalized[0],
             scale * axis_normalized[1],
-            scale * axis_normalized[2]
+            scale * axis_normalized[2],
         ));
-        SO3{ arr: q_arr }
+        SO3 { arr: q_arr }
     }
     pub fn from_euler(roll: &T, pitch: &T, yaw: &T) -> SO3<T> {
         let q_roll: SO3<T> = SO3::from_axis_angle(&na::Vector3::x(), roll);
@@ -61,12 +68,11 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let y: T = self.y();
         let z: T = self.z();
         let w: T = self.w();
-        let val: T =  (w * y - x * z) * na::convert(2.0);
+        let val: T = (w * y - x * z) * na::convert(2.0);
         // hold at 90 degrees if invalid
         if val.abs() > na::convert(1.0) {
             return T::one().copysign(val) * na::convert(std::f64::consts::PI / 2.0);
-        }
-        else {
+        } else {
             return val.asin();
         }
     }
@@ -86,12 +92,14 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let q_y: T = q.y();
         let q_z: T = q.z();
         let q_w: T = q.w();
-        SO3{ arr: na::Unit::new_normalize(na::Vector4::new(
-            self_w * q_w - self_x * q_x - self_y * q_y - self_z * q_z,
-            self_w * q_x + self_x * q_w + self_y * q_z - self_z * q_y,
-            self_w * q_y - self_x * q_z + self_y * q_w + self_z * q_x,
-            self_w * q_z + self_x * q_y - self_y * q_x + self_z * q_w
-        )) }
+        SO3 {
+            arr: na::Unit::new_normalize(na::Vector4::new(
+                self_w * q_w - self_x * q_x - self_y * q_y - self_z * q_z,
+                self_w * q_x + self_x * q_w + self_y * q_z - self_z * q_y,
+                self_w * q_y - self_x * q_z + self_y * q_w + self_z * q_x,
+                self_w * q_z + self_x * q_y - self_y * q_x + self_z * q_w,
+            )),
+        }
     }
 }
 
@@ -119,15 +127,15 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<na::Vector3<T>
         let qwz: T = self.w() * self.z();
 
         na::Vector3::new(
-            (T::one() - qyy * na::convert(2.0) - qzz * na::convert(2.0)) * vx +
-            (qxy * na::convert(2.0) - qwz * na::convert(2.0)) * vy +
-            (qxz + qwy) * na::convert(2.0) * vz,
-            (qxy + qwz) * na::convert(2.0) * vx +
-            (T::one() - (qxx + qzz) * na::convert(2.0)) * vy +
-            (qyz - qwx) * na::convert(2.0) * vz,
-            (qxz - qwy) * na::convert(2.0) * vx +
-            (qyz + qwx) * na::convert(2.0) * vy +
-            (T::one() - (qxx + qyy) * na::convert(2.0)) * vz,
+            (T::one() - qyy * na::convert(2.0) - qzz * na::convert(2.0)) * vx
+                + (qxy * na::convert(2.0) - qwz * na::convert(2.0)) * vy
+                + (qxz + qwy) * na::convert(2.0) * vz,
+            (qxy + qwz) * na::convert(2.0) * vx
+                + (T::one() - (qxx + qzz) * na::convert(2.0)) * vy
+                + (qyz - qwx) * na::convert(2.0) * vz,
+            (qxz - qwy) * na::convert(2.0) * vx
+                + (qyz + qwx) * na::convert(2.0) * vy
+                + (T::one() - (qxx + qyy) * na::convert(2.0)) * vz,
         )
     }
 }

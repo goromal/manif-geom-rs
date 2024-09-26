@@ -2,8 +2,8 @@
 
 // use num_traits::Float; TODO remove?
 
-mod so3;
 mod so2;
+mod so3;
 
 // use rand::distributions::{Distribution, Standard};
 
