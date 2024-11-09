@@ -47,7 +47,23 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
             arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)], m[(1, 0)])),
         }
     }
-    // fromTwoUnitVectors
+    pub fn from_two_unit_vectors(
+        u: na::Unit<na::Vector2<T>>,
+        v: na::Unit<na::Vector2<T>>,
+    ) -> SO2<T> {
+        let mut q: SO2<T> = SO2::identity();
+        let d: T = u[0] * v[0] + u[1] * v[1];
+        if d < na::convert(0.99999999) && d > na::convert(-0.99999999) {
+            q = SO2 {
+                arr: na::Unit::new_unchecked(na::Vector2::new(d, u[0] * v[1] - u[1] * v[0])),
+            };
+        } else if d < na::convert(-0.99999999) {
+            q = SO2 {
+                arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(-1.0), na::convert(0.0))),
+            };
+        }
+        q
+    }
     pub fn from_complex(qw: T, qx: T) -> SO2<T> {
         SO2 {
             arr: na::Unit::new_normalize(na::Vector2::new(qw, qx)),
@@ -59,15 +75,14 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     pub fn x(&self) -> T {
         self.arr[(1, 0)]
     }
-    pub fn angle(&self) -> T {
-        self.x().atan2(self.w())
-    }
     pub fn array(&self) -> na::Unit<na::Vector2<T>> {
         self.arr
     }
     pub fn copy(&self) -> SO2<T> {
         SO2 { arr: self.arr }
     }
+    // normalize
+    // normalized
     pub fn R(&self) -> na::Matrix2<T> {
         let c: T = self.w();
         let s: T = self.x();
@@ -77,9 +92,31 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         SO2::from_complex(self.w(), -self.x())
     }
     // invert
-    // angle
+    pub fn angle(&self) -> T {
+        self.x().atan2(self.w())
+    }
     // otimes
-    // ...
+    // oplus
+    // ominus
+    // hat
+    // vee
+    // log
+    // Log
+    // exp
+    // Exp
+    //= q
+    //* q
+    //*= q
+    //*= s
+    ///= s
+    ///
+    //* v
+    //+ v
+    //+= v
+    //- q
+    // s * q
+    // q * s
+    // <<
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<na::Vector2<T>> for SO2<T> {
