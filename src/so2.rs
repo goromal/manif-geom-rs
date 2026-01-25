@@ -37,22 +37,27 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         }
     }
 
-    pub fn nans() -> SO2<T> {
-        SO2 {
-            arr: na::Unit::new_unchecked(na::Vector2::new(
-                T::from_subset(&f64::NAN),
-                T::from_subset(&f64::NAN),
-            )),
-        }
-    }
     pub fn from_angle(angle: &T) -> SO2<T> {
+        debug_assert!(angle.is_finite(), "SO2::from_angle received non-finite angle");
         let c: T = angle.cos();
         let s: T = angle.sin();
+        debug_assert!(c.is_finite() && s.is_finite(), "SO2::from_angle produced non-finite cos/sin values");
         SO2 {
             arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))),
         }
     }
     pub fn from_rot_mat(m: &na::Matrix2<T>) -> SO2<T> {
+        #[cfg(debug_assertions)]
+        {
+            let det = m[(0, 0)] * m[(1, 1)] - m[(0, 1)] * m[(1, 0)];
+            let one: T = na::convert(1.0);
+            let epsilon: T = na::convert(1e-6);
+            debug_assert!(
+                (det - one).abs() < epsilon,
+                "from_rot_mat: Matrix determinant is not 1.0 (got {:?}), may not be a valid rotation matrix",
+                det
+            );
+        }
         SO2 {
             arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)], m[(1, 0)])),
         }
@@ -117,10 +122,15 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         copy.normalize();
         copy
     }
-    pub fn R(&self) -> na::Matrix2<T> {
+    pub fn rotation_matrix(&self) -> na::Matrix2<T> {
         let c: T = self.w();
         let s: T = self.x();
         na::Matrix2::new(c, -s, s, c)
+    }
+
+    #[deprecated(since = "0.1.0", note = "Use rotation_matrix() instead to follow Rust naming conventions")]
+    pub fn R(&self) -> na::Matrix2<T> {
+        self.rotation_matrix()
     }
     pub fn inverse(&self) -> SO2<T> {
         SO2::from_complex(self.w(), -self.x())
@@ -137,7 +147,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
 
     pub fn otimes(&self, q: &SO2<T>) -> SO2<T> {
         SO2 {
-            arr: na::Unit::new_unchecked(na::Vector2::new(
+            arr: na::Unit::new_normalize(na::Vector2::new(
                 self.w() * q.w() - self.x() * q.x(),
                 self.w() * q.x() + self.x() * q.w(),
             )),
@@ -145,12 +155,12 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     }
 
     pub fn oplus(&self, delta: &na::Vector1<T>) -> SO2<T> {
-        self.otimes(&SO2::Exp(delta))
+        self.otimes(&SO2::exp_map(delta))
     }
 
     pub fn ominus(&self, q: &SO2<T>) -> na::Vector1<T> {
         let dq = q.inverse().otimes(self);
-        SO2::Log(&dq)
+        SO2::log_map(&dq)
     }
 
     pub fn hat(omega: &na::Vector1<T>) -> na::Matrix2<T> {
@@ -163,19 +173,29 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     }
 
     pub fn log(q: &SO2<T>) -> na::Matrix2<T> {
-        SO2::hat(&SO2::Log(q))
+        SO2::hat(&SO2::log_map(q))
     }
 
-    pub fn Log(q: &SO2<T>) -> na::Vector1<T> {
+    pub fn log_map(q: &SO2<T>) -> na::Vector1<T> {
         na::Vector1::new(q.angle())
     }
 
-    pub fn exp(omega_mat: &na::Matrix2<T>) -> SO2<T> {
-        SO2::Exp(&SO2::vee(omega_mat))
+    #[deprecated(since = "0.1.0", note = "Use log_map() instead to follow Rust naming conventions")]
+    pub fn Log(q: &SO2<T>) -> na::Vector1<T> {
+        SO2::log_map(q)
     }
 
-    pub fn Exp(omega: &na::Vector1<T>) -> SO2<T> {
+    pub fn exp(omega_mat: &na::Matrix2<T>) -> SO2<T> {
+        SO2::exp_map(&SO2::vee(omega_mat))
+    }
+
+    pub fn exp_map(omega: &na::Vector1<T>) -> SO2<T> {
         SO2::from_angle(&omega[0])
+    }
+
+    #[deprecated(since = "0.1.0", note = "Use exp_map() instead to follow Rust naming conventions")]
+    pub fn Exp(omega: &na::Vector1<T>) -> SO2<T> {
+        SO2::exp_map(omega)
     }
 
     pub fn cast<T2: na::Scalar + na::ComplexField + na::RealField + Copy>(&self) -> SO2<T2>
@@ -239,18 +259,18 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> MulAssign<&SO2<T>>
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<f64> for SO2<T> {
     type Output = SO2<T>;
     fn mul(self, s: f64) -> SO2<T> {
-        let log_val = SO2::Log(&self);
+        let log_val = SO2::log_map(&self);
         let scaled = log_val * na::convert::<f64, T>(s);
-        SO2::Exp(&scaled)
+        SO2::exp_map(&scaled)
     }
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<f64> for &SO2<T> {
     type Output = SO2<T>;
     fn mul(self, s: f64) -> SO2<T> {
-        let log_val = SO2::Log(self);
+        let log_val = SO2::log_map(self);
         let scaled = log_val * na::convert::<f64, T>(s);
-        SO2::Exp(&scaled)
+        SO2::exp_map(&scaled)
     }
 }
 
@@ -258,27 +278,27 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<f64> for &SO2<
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<SO2<T>> for f64 {
     type Output = SO2<T>;
     fn mul(self, q: SO2<T>) -> SO2<T> {
-        let log_val = SO2::Log(&q);
+        let log_val = SO2::log_map(&q);
         let scaled = log_val * na::convert::<f64, T>(self);
-        SO2::Exp(&scaled)
+        SO2::exp_map(&scaled)
     }
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Mul<&SO2<T>> for f64 {
     type Output = SO2<T>;
     fn mul(self, q: &SO2<T>) -> SO2<T> {
-        let log_val = SO2::Log(q);
+        let log_val = SO2::log_map(q);
         let scaled = log_val * na::convert::<f64, T>(self);
-        SO2::Exp(&scaled)
+        SO2::exp_map(&scaled)
     }
 }
 
 // MulAssign for SO2 *= f64
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> MulAssign<f64> for SO2<T> {
     fn mul_assign(&mut self, s: f64) {
-        let log_val = SO2::Log(self);
+        let log_val = SO2::log_map(self);
         let scaled = log_val * na::convert::<f64, T>(s);
-        *self = SO2::Exp(&scaled);
+        *self = SO2::exp_map(&scaled);
     }
 }
 
@@ -286,24 +306,27 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> MulAssign<f64> for
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO2<T> {
     type Output = SO2<T>;
     fn div(self, s: f64) -> SO2<T> {
-        let log_val = SO2::Log(&self);
-        SO2::Exp(&(log_val / na::convert::<f64, T>(s)))
+        debug_assert!(s.abs() >= f64::EPSILON, "Division by zero in SO2 scalar division: {}", s);
+        let log_val = SO2::log_map(&self);
+        SO2::exp_map(&(log_val / na::convert::<f64, T>(s)))
     }
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO2<T> {
     type Output = SO2<T>;
     fn div(self, s: f64) -> SO2<T> {
-        let log_val = SO2::Log(self);
-        SO2::Exp(&(log_val / na::convert::<f64, T>(s)))
+        debug_assert!(s.abs() >= f64::EPSILON, "Division by zero in SO2 scalar division: {}", s);
+        let log_val = SO2::log_map(self);
+        SO2::exp_map(&(log_val / na::convert::<f64, T>(s)))
     }
 }
 
 // DivAssign for SO2 /= f64
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> DivAssign<f64> for SO2<T> {
     fn div_assign(&mut self, s: f64) {
-        let log_val = SO2::Log(self);
-        *self = SO2::Exp(&(log_val / na::convert::<f64, T>(s)));
+        debug_assert!(s.abs() >= f64::EPSILON, "Division by zero in SO2 scalar division: {}", s);
+        let log_val = SO2::log_map(self);
+        *self = SO2::exp_map(&(log_val / na::convert::<f64, T>(s)));
     }
 }
 
@@ -511,15 +534,15 @@ mod test {
             let q: SO2<f64> = SO2::random();
             let w: Vector1<f64> = Vector1::new_random();
 
-            // Test Log then Exp
-            let q_log = SO2::Log(&q);
-            let q2 = SO2::Exp(&q_log);
+            // Test log_map then exp_map
+            let q_log = SO2::log_map(&q);
+            let q2 = SO2::exp_map(&q_log);
             assert!((q.w() - q2.w()).abs() < EPSILON);
             assert!((q.x() - q2.x()).abs() < EPSILON);
 
-            // Test Exp then Log
-            let w_exp = SO2::Exp(&w);
-            let w2 = SO2::Log(&w_exp);
+            // Test exp_map then log_map
+            let w_exp = SO2::exp_map(&w);
+            let w2 = SO2::log_map(&w_exp);
             assert!((w[0] - w2[0]).abs() < EPSILON);
         }
     }
@@ -627,7 +650,7 @@ mod test {
     fn test_rotation_matrix() {
         let angle = std::f64::consts::PI / 4.0;
         let q = SO2::from_angle(&angle);
-        let r = q.R();
+        let r = q.rotation_matrix();
 
         // Check that R is a valid rotation matrix
         let det = r[(0, 0)] * r[(1, 1)] - r[(0, 1)] * r[(1, 0)];
@@ -645,7 +668,7 @@ mod test {
     fn test_from_rotation_matrix() {
         let angle = std::f64::consts::PI / 3.0;
         let q = SO2::from_angle(&angle);
-        let r = q.R();
+        let r = q.rotation_matrix();
         let q2 = SO2::from_rot_mat(&r);
 
         assert!((q.w() - q2.w()).abs() < EPSILON);
