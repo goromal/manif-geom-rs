@@ -2,9 +2,6 @@ extern crate nalgebra as na;
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
 
-#[path = "so3.rs"]
-mod so3;
-
 /// SO2 implementation
 #[derive(Debug, Clone, Copy)]
 pub struct SO2<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
@@ -219,8 +216,8 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     {
         SO2 {
             arr: na::Unit::new_unchecked(na::Vector2::new(
-                na::convert(self.w().clone().into()),
-                na::convert(self.x().clone().into()),
+                na::convert(self.w().into()),
+                na::convert(self.x().into()),
             )),
         }
     }
@@ -488,8 +485,8 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy + fmt::Display> fmt
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::so3::SO3;
     use na::{Vector1, Vector2, Vector3};
-    use so3::SO3;
 
     static EPSILON: f64 = 1e-8;
 

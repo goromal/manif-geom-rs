@@ -2,7 +2,6 @@ extern crate nalgebra as na;
 use std::ops::Mul;
 
 /// SO3 implementation
-
 pub struct SO3<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
     arr: na::Unit<na::Vector4<T>>, // w, x, y, z
 }
@@ -71,9 +70,9 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let val: T = (w * y - x * z) * na::convert(2.0);
         // hold at 90 degrees if invalid
         if val.abs() > na::convert(1.0) {
-            return T::one().copysign(val) * na::convert(std::f64::consts::PI / 2.0);
+            T::one().copysign(val) * na::convert(std::f64::consts::PI / 2.0)
         } else {
-            return val.asin();
+            val.asin()
         }
     }
     pub fn yaw(&self) -> T {
