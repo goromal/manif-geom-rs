@@ -38,10 +38,16 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     }
 
     pub fn from_angle(angle: &T) -> SO2<T> {
-        debug_assert!(angle.is_finite(), "SO2::from_angle received non-finite angle");
+        debug_assert!(
+            angle.is_finite(),
+            "SO2::from_angle received non-finite angle"
+        );
         let c: T = angle.cos();
         let s: T = angle.sin();
-        debug_assert!(c.is_finite() && s.is_finite(), "SO2::from_angle produced non-finite cos/sin values");
+        debug_assert!(
+            c.is_finite() && s.is_finite(),
+            "SO2::from_angle produced non-finite cos/sin values"
+        );
         SO2 {
             arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))),
         }
@@ -128,7 +134,10 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         na::Matrix2::new(c, -s, s, c)
     }
 
-    #[deprecated(since = "0.1.0", note = "Use rotation_matrix() instead to follow Rust naming conventions")]
+    #[deprecated(
+        since = "0.1.0",
+        note = "Use rotation_matrix() instead to follow Rust naming conventions"
+    )]
     pub fn R(&self) -> na::Matrix2<T> {
         self.rotation_matrix()
     }
@@ -180,7 +189,10 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         na::Vector1::new(q.angle())
     }
 
-    #[deprecated(since = "0.1.0", note = "Use log_map() instead to follow Rust naming conventions")]
+    #[deprecated(
+        since = "0.1.0",
+        note = "Use log_map() instead to follow Rust naming conventions"
+    )]
     pub fn Log(q: &SO2<T>) -> na::Vector1<T> {
         SO2::log_map(q)
     }
@@ -193,7 +205,10 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         SO2::from_angle(&omega[0])
     }
 
-    #[deprecated(since = "0.1.0", note = "Use exp_map() instead to follow Rust naming conventions")]
+    #[deprecated(
+        since = "0.1.0",
+        note = "Use exp_map() instead to follow Rust naming conventions"
+    )]
     pub fn Exp(omega: &na::Vector1<T>) -> SO2<T> {
         SO2::exp_map(omega)
     }
@@ -306,7 +321,11 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> MulAssign<f64> for
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO2<T> {
     type Output = SO2<T>;
     fn div(self, s: f64) -> SO2<T> {
-        debug_assert!(s.abs() >= f64::EPSILON, "Division by zero in SO2 scalar division: {}", s);
+        debug_assert!(
+            s.abs() >= f64::EPSILON,
+            "Division by zero in SO2 scalar division: {}",
+            s
+        );
         let log_val = SO2::log_map(&self);
         SO2::exp_map(&(log_val / na::convert::<f64, T>(s)))
     }
@@ -315,7 +334,11 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO2<T
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO2<T> {
     type Output = SO2<T>;
     fn div(self, s: f64) -> SO2<T> {
-        debug_assert!(s.abs() >= f64::EPSILON, "Division by zero in SO2 scalar division: {}", s);
+        debug_assert!(
+            s.abs() >= f64::EPSILON,
+            "Division by zero in SO2 scalar division: {}",
+            s
+        );
         let log_val = SO2::log_map(self);
         SO2::exp_map(&(log_val / na::convert::<f64, T>(s)))
     }
@@ -324,7 +347,11 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO2<
 // DivAssign for SO2 /= f64
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> DivAssign<f64> for SO2<T> {
     fn div_assign(&mut self, s: f64) {
-        debug_assert!(s.abs() >= f64::EPSILON, "Division by zero in SO2 scalar division: {}", s);
+        debug_assert!(
+            s.abs() >= f64::EPSILON,
+            "Division by zero in SO2 scalar division: {}",
+            s
+        );
         let log_val = SO2::log_map(self);
         *self = SO2::exp_map(&(log_val / na::convert::<f64, T>(s)));
     }
@@ -411,7 +438,9 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> AddAssign<na::Vect
     }
 }
 
-impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> AddAssign<&na::Vector1<T>> for SO2<T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> AddAssign<&na::Vector1<T>>
+    for SO2<T>
+{
     fn add_assign(&mut self, rhs: &na::Vector1<T>) {
         *self = self.oplus(rhs);
     }
@@ -447,7 +476,9 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Sub<&SO2<T>> for &
 }
 
 // Display trait for printing
-impl<T: na::Scalar + na::ComplexField + na::RealField + Copy + fmt::Display> fmt::Display for SO2<T> {
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy + fmt::Display> fmt::Display
+    for SO2<T>
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "SO(2): [ {}, {}i ]", self.w(), self.x())
     }
@@ -559,15 +590,11 @@ mod test {
         v1 /= v1.norm();
         let mut v2: Vector2<f64> = Vector2::new_random();
         v2 /= v2.norm();
-        let qv = SO2::from_two_unit_vectors(
-            na::Unit::new_unchecked(v1),
-            na::Unit::new_unchecked(v2),
-        );
-        let qv2 = SO2::from_two_unit_vectors(
-            na::Unit::new_unchecked(v2),
-            na::Unit::new_unchecked(v1),
-        )
-        .inverse();
+        let qv =
+            SO2::from_two_unit_vectors(na::Unit::new_unchecked(v1), na::Unit::new_unchecked(v2));
+        let qv2 =
+            SO2::from_two_unit_vectors(na::Unit::new_unchecked(v2), na::Unit::new_unchecked(v1))
+                .inverse();
         assert!((qv.w() - qv2.w()).abs() < EPSILON);
         assert!((qv.x() - qv2.x()).abs() < EPSILON);
 
