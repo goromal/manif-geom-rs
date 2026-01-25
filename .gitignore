@@ -1,3 +1,4 @@
 *.nix
 result
 target/*
+.vscode/*
