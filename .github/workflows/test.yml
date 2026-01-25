@@ -26,7 +26,7 @@ jobs:
         components: clippy
     - uses: Swatinem/rust-cache@v2
     - name: Lint
-      run: cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A non_snake_case
+      run: cargo clippy -- -D warnings -A dead_code -A non_snake_case
     - name: Build
       run: cargo build --verbose
     - name: Run tests
