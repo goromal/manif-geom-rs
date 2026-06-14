@@ -34,6 +34,15 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         }
     }
 
+    pub fn nans() -> SO2<T> {
+        SO2 {
+            arr: na::Unit::new_unchecked(na::Vector2::new(
+                na::convert(f64::NAN),
+                na::convert(f64::NAN),
+            )),
+        }
+    }
+
     pub fn from_angle(angle: &T) -> SO2<T> {
         debug_assert!(
             angle.is_finite(),
