@@ -274,7 +274,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         ((w * z + x * y) * na::convert(2.0)).atan2(T::one() - (y * y + z * z) * na::convert(2.0))
     }
 
-    pub fn to_euler(&self) -> na::Vector3<T> {
+    pub fn to_euler(self) -> na::Vector3<T> {
         na::Vector3::new(self.roll(), self.pitch(), self.yaw())
     }
 
