@@ -136,12 +136,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         if d < na::convert(0.99999999) && d > na::convert(-0.99999999) {
             let invs: T = T::one() / (na::convert::<f64, T>(2.0) * (T::one() + d)).sqrt();
             let xyz = u.cross(&(v.scale(invs)));
-            let mut q = SO3::from_quat(
-                na::convert::<f64, T>(0.5) / invs,
-                xyz[0],
-                xyz[1],
-                xyz[2],
-            );
+            let mut q = SO3::from_quat(na::convert::<f64, T>(0.5) / invs, xyz[0], xyz[1], xyz[2]);
             q.normalize();
             q
         } else if d < na::convert(-0.99999999) {
@@ -255,8 +250,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let y = self.y();
         let z = self.z();
         let w = self.w();
-        ((w * x + y * z) * na::convert(2.0))
-            .atan2(T::one() - (x * x + y * y) * na::convert(2.0))
+        ((w * x + y * z) * na::convert(2.0)).atan2(T::one() - (x * x + y * y) * na::convert(2.0))
     }
 
     pub fn pitch(&self) -> T {
@@ -277,8 +271,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let y = self.y();
         let z = self.z();
         let w = self.w();
-        ((w * z + x * y) * na::convert(2.0))
-            .atan2(T::one() - (y * y + z * z) * na::convert(2.0))
+        ((w * z + x * y) * na::convert(2.0)).atan2(T::one() - (y * y + z * z) * na::convert(2.0))
     }
 
     pub fn to_euler(&self) -> na::Vector3<T> {
@@ -290,9 +283,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let x = self.x();
         let y = self.y();
         let z = self.z();
-        na::Matrix4::new(
-            w, -x, -y, -z, x, w, -z, y, y, z, w, -x, z, -y, x, w,
-        )
+        na::Matrix4::new(w, -x, -y, -z, x, w, -z, y, y, z, w, -x, z, -y, x, w)
     }
 
     pub fn otimes(&self, q: &SO3<T>) -> SO3<T> {
@@ -376,12 +367,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
             q
         } else {
             let half: T = na::convert(0.5);
-            let mut q = SO3::from_quat(
-                T::one(),
-                omega[0] * half,
-                omega[1] * half,
-                omega[2] * half,
-            );
+            let mut q = SO3::from_quat(T::one(), omega[0] * half, omega[1] * half, omega[2] * half);
             q.normalize();
             q
         }
@@ -768,15 +754,11 @@ mod test {
         v1 /= v1.norm();
         let mut v2: Vector3<f64> = Vector3::new_random();
         v2 /= v2.norm();
-        let qv = SO3::from_two_unit_vectors(
-            na::Unit::new_unchecked(v1),
-            na::Unit::new_unchecked(v2),
-        );
-        let qv2 = SO3::from_two_unit_vectors(
-            na::Unit::new_unchecked(v2),
-            na::Unit::new_unchecked(v1),
-        )
-        .inverse();
+        let qv =
+            SO3::from_two_unit_vectors(na::Unit::new_unchecked(v1), na::Unit::new_unchecked(v2));
+        let qv2 =
+            SO3::from_two_unit_vectors(na::Unit::new_unchecked(v2), na::Unit::new_unchecked(v1))
+                .inverse();
         assert!((qv.w() - qv2.w()).abs() < EPSILON);
         assert!((qv.x() - qv2.x()).abs() < EPSILON);
         assert!((qv.y() - qv2.y()).abs() < EPSILON);
