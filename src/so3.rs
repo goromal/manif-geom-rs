@@ -333,9 +333,18 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         SO3::hat(&SO3::log_map(q))
     }
 
+    /// Logarithmic chart map: SO(3) -> R^3.
+    ///
+    /// The quaternion sign is canonicalized (`q_w >= 0`) before taking the log, so that the
+    /// geodesic (shortest) rotation vector is returned. Without this, a quaternion with negative
+    /// scalar part (which represents the same rotation as its negation) would map to the
+    /// complementary rotation of magnitude near `2*pi`.
     pub fn log_map(q: &SO3<T>) -> na::Vector3<T> {
-        let qv = na::Vector3::new(q.x(), q.y(), q.z());
-        let qw = q.w();
+        let (qv, qw) = if q.w() < T::zero() {
+            (na::Vector3::new(-q.x(), -q.y(), -q.z()), -q.w())
+        } else {
+            (na::Vector3::new(q.x(), q.y(), q.z()), q.w())
+        };
         let n = qv.norm();
         if n > na::convert(1e-4) {
             qv * (na::convert::<f64, T>(2.0) * n.atan2(qw) / n)
@@ -790,6 +799,21 @@ mod test {
         assert!((qr.x() - qr3.x()).abs() < EPSILON);
         assert!((qr.y() - qr3.y()).abs() < EPSILON);
         assert!((qr.z() - qr3.z()).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_log_double_cover() {
+        // q and -q represent the same rotation: log_map must return the
+        // geodesic (shortest) rotation vector for both, never the 2*pi
+        // complement.
+        let num_tests = 50;
+        for _ in 0..num_tests {
+            let w: Vector3<f64> = Vector3::new_random() - Vector3::new(0.5, 0.5, 0.5);
+            let q = SO3::exp_map(&w);
+            let q_neg = SO3::from_quat(-q.w(), -q.x(), -q.y(), -q.z());
+            assert!((SO3::log_map(&q) - w).norm() < EPSILON);
+            assert!((SO3::log_map(&q_neg) - w).norm() < EPSILON);
+        }
     }
 
     #[test]
