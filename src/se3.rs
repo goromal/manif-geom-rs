@@ -334,9 +334,39 @@ impl<T: na::RealField + Copy> Mul for SE3<T> {
     }
 }
 
+impl<T: na::RealField + Copy> Mul<&SE3<T>> for SE3<T> {
+    type Output = Self;
+
+    fn mul(self, rhs: &SE3<T>) -> Self::Output {
+        self.otimes(rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Mul<SE3<T>> for &SE3<T> {
+    type Output = SE3<T>;
+
+    fn mul(self, rhs: SE3<T>) -> Self::Output {
+        self.otimes(&rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Mul<&SE3<T>> for &SE3<T> {
+    type Output = SE3<T>;
+
+    fn mul(self, rhs: &SE3<T>) -> Self::Output {
+        self.otimes(rhs)
+    }
+}
+
 impl<T: na::RealField + Copy> MulAssign for SE3<T> {
     fn mul_assign(&mut self, rhs: Self) {
         *self = self.otimes(&rhs);
+    }
+}
+
+impl<T: na::RealField + Copy> MulAssign<&SE3<T>> for SE3<T> {
+    fn mul_assign(&mut self, rhs: &SE3<T>) {
+        *self = self.otimes(rhs);
     }
 }
 
@@ -348,6 +378,30 @@ impl<T: na::RealField + Copy> Mul<na::Vector3<T>> for SE3<T> {
     }
 }
 
+impl<T: na::RealField + Copy> Mul<&na::Vector3<T>> for SE3<T> {
+    type Output = na::Vector3<T>;
+
+    fn mul(self, rhs: &na::Vector3<T>) -> Self::Output {
+        self.transform_point(rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Mul<na::Vector3<T>> for &SE3<T> {
+    type Output = na::Vector3<T>;
+
+    fn mul(self, rhs: na::Vector3<T>) -> Self::Output {
+        self.transform_point(&rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Mul<&na::Vector3<T>> for &SE3<T> {
+    type Output = na::Vector3<T>;
+
+    fn mul(self, rhs: &na::Vector3<T>) -> Self::Output {
+        self.transform_point(rhs)
+    }
+}
+
 impl<T: na::RealField + Copy> Add<na::Vector6<T>> for SE3<T> {
     type Output = Self;
 
@@ -356,9 +410,39 @@ impl<T: na::RealField + Copy> Add<na::Vector6<T>> for SE3<T> {
     }
 }
 
+impl<T: na::RealField + Copy> Add<&na::Vector6<T>> for SE3<T> {
+    type Output = Self;
+
+    fn add(self, rhs: &na::Vector6<T>) -> Self::Output {
+        self.oplus(rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Add<na::Vector6<T>> for &SE3<T> {
+    type Output = SE3<T>;
+
+    fn add(self, rhs: na::Vector6<T>) -> Self::Output {
+        self.oplus(&rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Add<&na::Vector6<T>> for &SE3<T> {
+    type Output = SE3<T>;
+
+    fn add(self, rhs: &na::Vector6<T>) -> Self::Output {
+        self.oplus(rhs)
+    }
+}
+
 impl<T: na::RealField + Copy> AddAssign<na::Vector6<T>> for SE3<T> {
     fn add_assign(&mut self, rhs: na::Vector6<T>) {
         *self = self.oplus(&rhs);
+    }
+}
+
+impl<T: na::RealField + Copy> AddAssign<&na::Vector6<T>> for SE3<T> {
+    fn add_assign(&mut self, rhs: &na::Vector6<T>) {
+        *self = self.oplus(rhs);
     }
 }
 
@@ -370,6 +454,30 @@ impl<T: na::RealField + Copy> Sub for SE3<T> {
     }
 }
 
+impl<T: na::RealField + Copy> Sub<&SE3<T>> for SE3<T> {
+    type Output = na::Vector6<T>;
+
+    fn sub(self, rhs: &SE3<T>) -> Self::Output {
+        self.ominus(rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Sub<SE3<T>> for &SE3<T> {
+    type Output = na::Vector6<T>;
+
+    fn sub(self, rhs: SE3<T>) -> Self::Output {
+        self.ominus(&rhs)
+    }
+}
+
+impl<T: na::RealField + Copy> Sub<&SE3<T>> for &SE3<T> {
+    type Output = na::Vector6<T>;
+
+    fn sub(self, rhs: &SE3<T>) -> Self::Output {
+        self.ominus(rhs)
+    }
+}
+
 impl<T: na::RealField + Copy> Mul<f64> for SE3<T> {
     type Output = Self;
 
@@ -378,10 +486,26 @@ impl<T: na::RealField + Copy> Mul<f64> for SE3<T> {
     }
 }
 
+impl<T: na::RealField + Copy> Mul<f64> for &SE3<T> {
+    type Output = SE3<T>;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        SE3::exp_map(&(SE3::log_map(self) * na::convert::<f64, T>(rhs)))
+    }
+}
+
 impl<T: na::RealField + Copy> Mul<SE3<T>> for f64 {
     type Output = SE3<T>;
 
     fn mul(self, rhs: SE3<T>) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl<T: na::RealField + Copy> Mul<&SE3<T>> for f64 {
+    type Output = SE3<T>;
+
+    fn mul(self, rhs: &SE3<T>) -> Self::Output {
         rhs * self
     }
 }
@@ -398,6 +522,15 @@ impl<T: na::RealField + Copy> Div<f64> for SE3<T> {
     fn div(self, rhs: f64) -> Self::Output {
         assert!(rhs != 0.0, "cannot divide an SE3 transform by zero");
         Self::exp_map(&(Self::log_map(&self) / na::convert::<f64, T>(rhs)))
+    }
+}
+
+impl<T: na::RealField + Copy> Div<f64> for &SE3<T> {
+    type Output = SE3<T>;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        assert!(rhs != 0.0, "cannot divide an SE3 transform by zero");
+        SE3::exp_map(&(SE3::log_map(self) / na::convert::<f64, T>(rhs)))
     }
 }
 
@@ -562,15 +695,44 @@ mod tests {
     }
 
     #[test]
-    fn assignment_and_left_scalar_operators() {
+    #[allow(clippy::op_ref)]
+    fn complete_public_operator_surface() {
         let delta = na::Vector6::new(0.1, -0.2, 0.3, 0.01, -0.02, 0.03);
-        let mut x = SE3::<f64>::identity();
+        let identity = SE3::<f64>::identity();
+        let point = na::Vector3::new(0.4, -0.7, 1.2);
+        let expected_point = identity.transform_point(&point);
+        assert_transform_close(identity * identity, identity);
+        assert_transform_close(identity * &identity, identity);
+        assert_transform_close(&identity * identity, identity);
+        assert_transform_close(&identity * &identity, identity);
+        assert_eq!(identity * point, expected_point);
+        assert_eq!(identity * &point, expected_point);
+        assert_eq!(&identity * point, expected_point);
+        assert_eq!(&identity * &point, expected_point);
+
+        let expected = SE3::exp_map(&delta);
+        assert_transform_close(identity + delta, expected);
+        assert_transform_close(identity + &delta, expected);
+        assert_transform_close(&identity + delta, expected);
+        assert_transform_close(&identity + &delta, expected);
+        assert!((expected - identity - delta).norm() < EPS);
+        assert!((expected - &identity - delta).norm() < EPS);
+        assert!((&expected - identity - delta).norm() < EPS);
+        assert!((&expected - &identity - delta).norm() < EPS);
+        assert_transform_close(identity * 0.5, &identity * 0.5);
+        assert_transform_close(0.5 * identity, 0.5 * &identity);
+        assert_transform_close(identity / 0.5, &identity / 0.5);
+
+        let mut x = identity;
         assert_eq!(x[0], 0.0);
         assert_eq!(x.array(), x.elements());
-        x *= SE3::identity();
-        x += delta;
-        let expected = SE3::exp_map(&delta);
+        x *= &identity;
+        x += &delta;
         assert_transform_close(x, expected);
+        let mut owned_assignments = identity;
+        owned_assignments *= identity;
+        owned_assignments += delta;
+        assert_transform_close(owned_assignments, expected);
         assert_transform_close(0.5 * x, x * 0.5);
         x *= 0.5;
         x /= 0.5;
