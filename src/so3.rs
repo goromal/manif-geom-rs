@@ -1,29 +1,31 @@
 extern crate nalgebra as na;
 use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub};
 
 /// SO3 implementation
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SO3<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
-    arr: na::Unit<na::Vector4<T>>, // w, x, y, z
+    arr: na::Vector4<T>, // w, x, y, z
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Default for SO3<T> {
     fn default() -> Self {
         Self {
-            arr: na::Unit::new_unchecked(na::Vector4::new(
+            arr: na::Vector4::new(
                 na::convert(1.0),
                 na::convert(0.0),
                 na::convert(0.0),
                 na::convert(0.0),
-            )),
+            ),
         }
     }
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
     pub fn new(q: na::Unit<na::Vector4<T>>) -> SO3<T> {
-        Self { arr: q }
+        Self {
+            arr: q.into_inner(),
+        }
     }
 
     pub fn random() -> SO3<T>
@@ -31,7 +33,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         rand::distributions::Standard: rand::distributions::Distribution<T>,
     {
         let mut q = SO3 {
-            arr: na::Unit::new_normalize(na::Vector4::new_random()),
+            arr: na::Vector4::new_random(),
         };
         q.normalize();
         q
@@ -39,37 +41,38 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
 
     pub fn identity() -> SO3<T> {
         SO3 {
-            arr: na::Unit::new_unchecked(na::Vector4::new(
+            arr: na::Vector4::new(
                 na::convert(1.0),
                 na::convert(0.0),
                 na::convert(0.0),
                 na::convert(0.0),
-            )),
+            ),
         }
     }
 
     pub fn nans() -> SO3<T> {
         SO3 {
-            arr: na::Unit::new_unchecked(na::Vector4::new(
+            arr: na::Vector4::new(
                 na::convert(f64::NAN),
                 na::convert(f64::NAN),
                 na::convert(f64::NAN),
                 na::convert(f64::NAN),
-            )),
+            ),
         }
     }
 
     pub fn from_axis_angle(axis: &na::Vector3<T>, angle: &T) -> SO3<T> {
+        assert!(axis.norm_squared() > T::zero(), "SO3 axis must be nonzero");
         let th2: T = *angle / na::convert(2.0);
         let axis_normalized = axis.normalize();
         let scale: T = th2.sin();
         let mut q = SO3 {
-            arr: na::Unit::new_normalize(na::Vector4::new(
+            arr: na::Vector4::new(
                 th2.cos(),
                 scale * axis_normalized[0],
                 scale * axis_normalized[1],
                 scale * axis_normalized[2],
-            )),
+            ),
         };
         q.normalize();
         q
@@ -79,7 +82,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let q_roll: SO3<T> = SO3::from_axis_angle(&na::Vector3::x(), roll);
         let q_pitch: SO3<T> = SO3::from_axis_angle(&na::Vector3::y(), pitch);
         let q_yaw: SO3<T> = SO3::from_axis_angle(&na::Vector3::z(), yaw);
-        q_yaw * q_pitch * q_roll
+        (q_yaw * q_pitch * q_roll).normalized()
     }
 
     pub fn from_rot_mat(m: &na::Matrix3<T>) -> SO3<T> {
@@ -148,14 +151,32 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
 
     pub fn from_quat(qw: T, qx: T, qy: T, qz: T) -> SO3<T> {
         SO3 {
-            arr: na::Unit::new_unchecked(na::Vector4::new(qw, qx, qy, qz)),
+            arr: na::Vector4::new(qw, qx, qy, qz),
         }
     }
 
     pub fn from_quat_vec(qvec: &na::Vector4<T>) -> SO3<T> {
-        SO3 {
-            arr: na::Unit::new_unchecked(*qvec),
-        }
+        SO3 { arr: *qvec }
+    }
+
+    /// Constructs a rotation from a scalar-first nalgebra quaternion.
+    pub fn from_quaternion(quaternion: na::Quaternion<T>) -> SO3<T> {
+        SO3::from_quat(quaternion.w, quaternion.i, quaternion.j, quaternion.k)
+    }
+
+    /// Constructs a rotation from a nalgebra unit quaternion.
+    pub fn from_unit_quaternion(quaternion: na::UnitQuaternion<T>) -> SO3<T> {
+        SO3::from_quaternion(*quaternion.quaternion())
+    }
+
+    /// Returns an equivalent nalgebra unit quaternion.
+    pub fn unit_quaternion(&self) -> na::UnitQuaternion<T> {
+        na::UnitQuaternion::new_normalize(na::Quaternion::new(
+            self.w(),
+            self.x(),
+            self.y(),
+            self.z(),
+        ))
     }
 
     pub fn w(&self) -> T {
@@ -172,15 +193,20 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
     }
 
     pub fn elements(&self) -> na::Vector4<T> {
-        self.arr.into_inner()
+        self.arr
     }
 
     pub fn array(&self) -> na::Vector4<T> {
-        self.arr.into_inner()
+        self.arr
     }
 
     pub fn data(&self) -> &[T] {
-        self.arr.as_ref().as_slice()
+        self.arr.as_slice()
+    }
+
+    /// Mutable access to the scalar-first quaternion coefficient buffer.
+    pub fn data_mut(&mut self) -> &mut [T] {
+        self.arr.as_mut_slice()
     }
 
     pub fn copy(&self) -> SO3<T> {
@@ -188,13 +214,13 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
     }
 
     pub fn normalize(&mut self) {
-        let v = self.arr.into_inner();
+        let v = self.arr;
         let norm = v.norm();
         let mut normalized = v / norm;
         if normalized[0] < T::zero() {
             normalized = -normalized;
         }
-        self.arr = na::Unit::new_unchecked(normalized);
+        self.arr = normalized;
     }
 
     pub fn normalized(&self) -> SO3<T> {
@@ -231,6 +257,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         since = "0.1.0",
         note = "Use rotation_matrix() instead to follow Rust naming conventions"
     )]
+    #[allow(non_snake_case)]
     pub fn R(&self) -> na::Matrix3<T> {
         self.rotation_matrix()
     }
@@ -240,8 +267,9 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
     }
 
     pub fn invert(&mut self) -> &mut Self {
-        let v = self.arr.into_inner();
-        self.arr = na::Unit::new_unchecked(na::Vector4::new(v[0], -v[1], -v[2], -v[3]));
+        self.arr[1] = -self.arr[1];
+        self.arr[2] = -self.arr[2];
+        self.arr[3] = -self.arr[3];
         self
     }
 
@@ -274,7 +302,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         ((w * z + x * y) * na::convert(2.0)).atan2(T::one() - (y * y + z * z) * na::convert(2.0))
     }
 
-    pub fn to_euler(self) -> na::Vector3<T> {
+    pub fn to_euler(&self) -> na::Vector3<T> {
         na::Vector3::new(self.roll(), self.pitch(), self.yaw())
     }
 
@@ -296,12 +324,12 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         let qy = q.y();
         let qz = q.z();
         SO3 {
-            arr: na::Unit::new_normalize(na::Vector4::new(
+            arr: na::Vector4::new(
                 sw * qw - sx * qx - sy * qy - sz * qz,
                 sw * qx + sx * qw + sy * qz - sz * qy,
                 sw * qy - sx * qz + sy * qw + sz * qx,
                 sw * qz + sx * qy - sy * qx + sz * qw,
-            )),
+            ),
         }
     }
 
@@ -312,8 +340,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
     pub fn ominus(&self, q: &SO3<T>) -> na::Vector3<T> {
         let mut dq = q.inverse().otimes(self);
         if dq.w() < T::zero() {
-            let v = dq.arr.into_inner();
-            dq.arr = na::Unit::new_unchecked(-v);
+            dq.arr = -dq.arr;
         }
         SO3::log_map(&dq)
     }
@@ -349,7 +376,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         if n > na::convert(1e-4) {
             qv * (na::convert::<f64, T>(2.0) * n.atan2(qw) / n)
         } else {
-            qv
+            qv * na::convert::<f64, T>(2.0)
         }
     }
 
@@ -357,6 +384,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         since = "0.1.0",
         note = "Use log_map() instead to follow Rust naming conventions"
     )]
+    #[allow(non_snake_case)]
     pub fn Log(q: &SO3<T>) -> na::Vector3<T> {
         SO3::log_map(q)
     }
@@ -386,22 +414,38 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO3<T> {
         since = "0.1.0",
         note = "Use exp_map() instead to follow Rust naming conventions"
     )]
+    #[allow(non_snake_case)]
     pub fn Exp(omega: &na::Vector3<T>) -> SO3<T> {
         SO3::exp_map(omega)
     }
 
-    pub fn cast<T2: na::Scalar + na::ComplexField + na::RealField + Copy>(&self) -> SO3<T2>
+    pub fn cast<T2>(&self) -> SO3<T2>
     where
-        T: Into<T2>,
+        T: num_traits::NumCast,
+        T2: na::Scalar + na::ComplexField + na::RealField + Copy + num_traits::NumCast,
     {
         SO3 {
-            arr: na::Unit::new_unchecked(na::Vector4::new(
-                na::convert(self.w().into()),
-                na::convert(self.x().into()),
-                na::convert(self.y().into()),
-                na::convert(self.z().into()),
-            )),
+            arr: na::Vector4::new(
+                num_traits::cast(self.w()).expect("numeric cast failed"),
+                num_traits::cast(self.x()).expect("numeric cast failed"),
+                num_traits::cast(self.y()).expect("numeric cast failed"),
+                num_traits::cast(self.z()).expect("numeric cast failed"),
+            ),
         }
+    }
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Index<usize> for SO3<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.arr[index]
+    }
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> IndexMut<usize> for SO3<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.arr[index]
     }
 }
 
@@ -495,7 +539,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> MulAssign<f64> for
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO3<T> {
     type Output = SO3<T>;
     fn div(self, s: f64) -> SO3<T> {
-        debug_assert!(
+        assert!(
             s.abs() >= f64::EPSILON,
             "Division by zero in SO3 scalar division: {}",
             s
@@ -508,7 +552,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO3<T
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO3<T> {
     type Output = SO3<T>;
     fn div(self, s: f64) -> SO3<T> {
-        debug_assert!(
+        assert!(
             s.abs() >= f64::EPSILON,
             "Division by zero in SO3 scalar division: {}",
             s
@@ -521,7 +565,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO3<
 // DivAssign for SO3 /= f64
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> DivAssign<f64> for SO3<T> {
     fn div_assign(&mut self, s: f64) {
-        debug_assert!(
+        assert!(
             s.abs() >= f64::EPSILON,
             "Division by zero in SO3 scalar division: {}",
             s
@@ -817,6 +861,15 @@ mod test {
     }
 
     #[test]
+    fn test_log_exp_at_small_angles() {
+        for magnitude in [0.0, 1e-12, 1e-8, 9.9e-5] {
+            let omega = Vector3::new(magnitude, -magnitude * 0.5, magnitude * 0.25);
+            let recovered = SO3::log_map(&SO3::exp_map(&omega));
+            assert!((recovered - omega).norm() < 1e-12);
+        }
+    }
+
+    #[test]
     fn test_identity() {
         let q = SO3::<f64>::identity();
         assert!((q.w() - 1.0).abs() < EPSILON);
@@ -914,5 +967,119 @@ mod test {
         assert!((q3.x() - q3_via_mat[1]).abs() < EPSILON);
         assert!((q3.y() - q3_via_mat[2]).abs() < EPSILON);
         assert!((q3.z() - q3_via_mat[3]).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_nalgebra_quaternion_interop() {
+        let nalgebra_q = na::UnitQuaternion::from_euler_angles(0.2, -0.3, 0.4);
+        let q = SO3::from_unit_quaternion(nalgebra_q);
+        assert!(
+            (q.rotation_matrix() - nalgebra_q.to_rotation_matrix().into_inner()).norm() < EPSILON
+        );
+        assert!(
+            (q.unit_quaternion().to_rotation_matrix().into_inner() - q.rotation_matrix()).norm()
+                < EPSILON
+        );
+    }
+
+    #[test]
+    fn test_rotation_matrix_conversion_all_trace_branches() {
+        let cases = [
+            SO3::identity(),
+            SO3::from_axis_angle(&Vector3::x(), &std::f64::consts::PI),
+            SO3::from_axis_angle(&Vector3::y(), &std::f64::consts::PI),
+            SO3::from_axis_angle(&Vector3::z(), &std::f64::consts::PI),
+        ];
+        for q in cases {
+            let recovered = SO3::from_rot_mat(&q.rotation_matrix());
+            assert!((recovered.rotation_matrix() - q.rotation_matrix()).norm() < EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_parallel_and_antiparallel_vectors() {
+        let x = na::Unit::new_normalize(Vector3::<f64>::x());
+        let minus_x = na::Unit::new_normalize(-Vector3::<f64>::x());
+        assert_eq!(SO3::from_two_unit_vectors(x, x), SO3::identity());
+        let opposite = SO3::from_two_unit_vectors(x, minus_x);
+        assert!((opposite * Vector3::x() + Vector3::x()).norm() < EPSILON);
+    }
+
+    #[test]
+    fn test_raw_coefficients_mutation_and_cast() {
+        let mut q = SO3::from_quat(1.0_f64, 2.0, 3.0, 4.0);
+        q.data_mut()[0] = -1.0;
+        q[1] = -2.0;
+        q.normalize();
+        assert!((q.elements().norm() - 1.0).abs() < EPSILON);
+        assert!(q.w() >= 0.0);
+        let q32 = q.cast::<f32>();
+        assert!((q32.elements().norm() - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    #[should_panic(expected = "SO3 axis must be nonzero")]
+    fn test_zero_axis_panics() {
+        let _ = SO3::<f64>::from_axis_angle(&Vector3::zeros(), &1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Division by zero")]
+    fn test_division_by_zero_panics() {
+        let _ = SO3::<f64>::identity() / 0.0;
+    }
+
+    #[test]
+    #[allow(deprecated, clippy::op_ref)]
+    fn test_complete_public_operator_surface() {
+        let q = SO3::from_euler(&0.1_f64, &-0.2, &0.3);
+        let identity = SO3::identity();
+        let unit = na::Unit::new_normalize(Vector4::new(1.0, 2.0, 3.0, 4.0));
+        assert_eq!(SO3::new(unit).elements(), unit.into_inner());
+        assert!(SO3::<f64>::nans().data().iter().all(|value| value.is_nan()));
+        assert_eq!(q[0], q.w());
+        assert_eq!(q.copy(), q);
+        let mut inverted = q;
+        inverted.invert();
+        assert_eq!(inverted, q.inverse());
+        assert_eq!(q.R(), q.rotation_matrix());
+        assert!((SO3::Exp(&SO3::Log(&q)).rotation_matrix() - q.rotation_matrix()).norm() < EPSILON);
+
+        assert_eq!(q * &identity, q);
+        assert_eq!(&q * identity, q);
+        assert_eq!(&q * &identity, q);
+        let mut composed = q;
+        composed *= identity;
+        composed *= &identity;
+        assert_eq!(composed, q);
+
+        let _ = &q * 0.5;
+        let _ = 0.5 * &q;
+        let mut scaled = q;
+        scaled *= 0.5;
+        scaled /= 0.5;
+        let _ = &q / 0.5;
+
+        let vector = Vector3::new(1.0, 2.0, 3.0);
+        let expected_vector = q * vector;
+        assert_eq!(q * &vector, expected_vector);
+        assert_eq!(&q * vector, expected_vector);
+        assert_eq!(&q * &vector, expected_vector);
+
+        let delta = Vector3::new(0.01, -0.02, 0.03);
+        let expected_plus = q + delta;
+        assert_eq!(q + &delta, expected_plus);
+        assert_eq!(&q + delta, expected_plus);
+        assert_eq!(&q + &delta, expected_plus);
+        let mut plus_assign = q;
+        plus_assign += delta;
+        assert_eq!(plus_assign, expected_plus);
+        plus_assign = q;
+        plus_assign += &delta;
+        assert_eq!(plus_assign, expected_plus);
+
+        assert!((expected_plus - &q - delta).norm() < EPSILON);
+        assert!((&expected_plus - q - delta).norm() < EPSILON);
+        assert!((&expected_plus - &q - delta).norm() < EPSILON);
     }
 }

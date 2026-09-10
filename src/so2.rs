@@ -1,45 +1,42 @@
 extern crate nalgebra as na;
 use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub};
 
 /// SO2 implementation
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SO2<T: na::Scalar + na::ComplexField + na::RealField + Copy> {
-    arr: na::Unit<na::Vector2<T>>, // w, x
+    arr: na::Vector2<T>, // w, x
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Default for SO2<T> {
     fn default() -> Self {
         Self {
-            arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))),
+            arr: na::Vector2::new(na::convert(1.0), na::convert(0.0)),
         }
     }
 }
 
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     pub fn new(q: na::Unit<na::Vector2<T>>) -> SO2<T> {
-        Self { arr: q }
+        Self {
+            arr: q.into_inner(),
+        }
     }
     pub fn random() -> SO2<T>
     where
         rand::distributions::Standard: rand::distributions::Distribution<T>,
     {
-        SO2 {
-            arr: na::Unit::new_normalize(na::Vector2::new_random()),
-        }
+        SO2::from_complex_vec(&na::Vector2::new_random()).normalized()
     }
     pub fn identity() -> SO2<T> {
         SO2 {
-            arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(1.0), na::convert(0.0))),
+            arr: na::Vector2::new(na::convert(1.0), na::convert(0.0)),
         }
     }
 
     pub fn nans() -> SO2<T> {
         SO2 {
-            arr: na::Unit::new_unchecked(na::Vector2::new(
-                na::convert(f64::NAN),
-                na::convert(f64::NAN),
-            )),
+            arr: na::Vector2::new(na::convert(f64::NAN), na::convert(f64::NAN)),
         }
     }
 
@@ -55,7 +52,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
             "SO2::from_angle produced non-finite cos/sin values"
         );
         SO2 {
-            arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(c), na::convert(s))),
+            arr: na::Vector2::new(na::convert(c), na::convert(s)),
         }
     }
     pub fn from_rot_mat(m: &na::Matrix2<T>) -> SO2<T> {
@@ -71,7 +68,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
             );
         }
         SO2 {
-            arr: na::Unit::new_normalize(na::Vector2::new(m[(0, 0)], m[(1, 0)])),
+            arr: na::Vector2::new(m[(0, 0)], m[(1, 0)]).normalize(),
         }
     }
     pub fn from_two_unit_vectors(
@@ -82,25 +79,23 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         let d: T = u[0] * v[0] + u[1] * v[1];
         if d < na::convert(0.99999999) && d > na::convert(-0.99999999) {
             q = SO2 {
-                arr: na::Unit::new_unchecked(na::Vector2::new(d, u[0] * v[1] - u[1] * v[0])),
+                arr: na::Vector2::new(d, u[0] * v[1] - u[1] * v[0]),
             };
         } else if d < na::convert(-0.99999999) {
             q = SO2 {
-                arr: na::Unit::new_unchecked(na::Vector2::new(na::convert(-1.0), na::convert(0.0))),
+                arr: na::Vector2::new(na::convert(-1.0), na::convert(0.0)),
             };
         }
         q
     }
     pub fn from_complex(qw: T, qx: T) -> SO2<T> {
         SO2 {
-            arr: na::Unit::new_normalize(na::Vector2::new(qw, qx)),
+            arr: na::Vector2::new(qw, qx),
         }
     }
 
     pub fn from_complex_vec(qvec: &na::Vector2<T>) -> SO2<T> {
-        SO2 {
-            arr: na::Unit::new_normalize(*qvec),
-        }
+        SO2 { arr: *qvec }
     }
     pub fn w(&self) -> T {
         self.arr[(0, 0)]
@@ -109,15 +104,20 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         self.arr[(1, 0)]
     }
     pub fn array(&self) -> na::Vector2<T> {
-        self.arr.into_inner()
+        self.arr
     }
 
     pub fn elements(&self) -> na::Vector2<T> {
-        self.arr.into_inner()
+        self.arr
     }
 
     pub fn data(&self) -> &[T] {
-        self.arr.as_ref().as_slice()
+        self.arr.as_slice()
+    }
+
+    /// Mutable access to the scalar-first coefficient buffer.
+    pub fn data_mut(&mut self) -> &mut [T] {
+        self.arr.as_mut_slice()
     }
 
     pub fn copy(&self) -> SO2<T> {
@@ -125,8 +125,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
     }
 
     pub fn normalize(&mut self) {
-        let normalized = na::Unit::new_normalize(self.arr.into_inner());
-        self.arr = normalized;
+        self.arr.normalize_mut();
     }
 
     pub fn normalized(&self) -> SO2<T> {
@@ -144,6 +143,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         since = "0.1.0",
         note = "Use rotation_matrix() instead to follow Rust naming conventions"
     )]
+    #[allow(non_snake_case)]
     pub fn R(&self) -> na::Matrix2<T> {
         self.rotation_matrix()
     }
@@ -153,7 +153,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
 
     pub fn invert(&mut self) -> &mut Self {
         let new_x = -self.x();
-        self.arr = na::Unit::new_unchecked(na::Vector2::new(self.w(), new_x));
+        self.arr[1] = new_x;
         self
     }
     pub fn angle(&self) -> T {
@@ -162,10 +162,10 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
 
     pub fn otimes(&self, q: &SO2<T>) -> SO2<T> {
         SO2 {
-            arr: na::Unit::new_normalize(na::Vector2::new(
+            arr: na::Vector2::new(
                 self.w() * q.w() - self.x() * q.x(),
                 self.w() * q.x() + self.x() * q.w(),
-            )),
+            ),
         }
     }
 
@@ -199,6 +199,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         since = "0.1.0",
         note = "Use log_map() instead to follow Rust naming conventions"
     )]
+    #[allow(non_snake_case)]
     pub fn Log(q: &SO2<T>) -> na::Vector1<T> {
         SO2::log_map(q)
     }
@@ -215,20 +216,34 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> SO2<T> {
         since = "0.1.0",
         note = "Use exp_map() instead to follow Rust naming conventions"
     )]
+    #[allow(non_snake_case)]
     pub fn Exp(omega: &na::Vector1<T>) -> SO2<T> {
         SO2::exp_map(omega)
     }
 
-    pub fn cast<T2: na::Scalar + na::ComplexField + na::RealField + Copy>(&self) -> SO2<T2>
+    pub fn cast<T2>(&self) -> SO2<T2>
     where
-        T: Into<T2>,
+        T: num_traits::NumCast,
+        T2: na::Scalar + na::ComplexField + na::RealField + Copy + num_traits::NumCast,
     {
-        SO2 {
-            arr: na::Unit::new_unchecked(na::Vector2::new(
-                na::convert(self.w().into()),
-                na::convert(self.x().into()),
-            )),
-        }
+        SO2::from_complex(
+            num_traits::cast(self.w()).expect("numeric cast failed"),
+            num_traits::cast(self.x()).expect("numeric cast failed"),
+        )
+    }
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Index<usize> for SO2<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.arr[index]
+    }
+}
+
+impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> IndexMut<usize> for SO2<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.arr[index]
     }
 }
 
@@ -327,7 +342,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> MulAssign<f64> for
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO2<T> {
     type Output = SO2<T>;
     fn div(self, s: f64) -> SO2<T> {
-        debug_assert!(
+        assert!(
             s.abs() >= f64::EPSILON,
             "Division by zero in SO2 scalar division: {}",
             s
@@ -340,7 +355,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for SO2<T
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO2<T> {
     type Output = SO2<T>;
     fn div(self, s: f64) -> SO2<T> {
-        debug_assert!(
+        assert!(
             s.abs() >= f64::EPSILON,
             "Division by zero in SO2 scalar division: {}",
             s
@@ -353,7 +368,7 @@ impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> Div<f64> for &SO2<
 // DivAssign for SO2 /= f64
 impl<T: na::Scalar + na::ComplexField + na::RealField + Copy> DivAssign<f64> for SO2<T> {
     fn div_assign(&mut self, s: f64) {
-        debug_assert!(
+        assert!(
             s.abs() >= f64::EPSILON,
             "Division by zero in SO2 scalar division: {}",
             s
@@ -713,5 +728,86 @@ mod test {
         let q = SO2::<f64>::identity();
         let s = format!("{}", q);
         assert!(s.contains("SO(2)"));
+    }
+
+    #[test]
+    fn test_raw_coefficients_mutation_and_cast() {
+        let mut q = SO2::from_complex(3.0_f64, 4.0);
+        assert_eq!(q.elements(), Vector2::new(3.0, 4.0));
+        q.data_mut()[0] = 6.0;
+        q[1] = 8.0;
+        q.normalize();
+        assert!((q.elements().norm() - 1.0).abs() < EPSILON);
+        let q32 = q.cast::<f32>();
+        assert!((q32.elements().norm() - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_parallel_and_antiparallel_vectors() {
+        let x = na::Unit::new_normalize(Vector2::<f64>::x());
+        let minus_x = na::Unit::new_normalize(-Vector2::<f64>::x());
+        assert_eq!(SO2::from_two_unit_vectors(x, x), SO2::identity());
+        let opposite = SO2::from_two_unit_vectors(x, minus_x);
+        assert!((opposite * Vector2::x() + Vector2::x()).norm() < EPSILON);
+    }
+
+    #[test]
+    #[should_panic(expected = "Division by zero")]
+    fn test_division_by_zero_panics() {
+        let _ = SO2::<f64>::identity() / 0.0;
+    }
+
+    #[test]
+    #[allow(deprecated, clippy::op_ref)]
+    fn test_complete_public_operator_surface() {
+        let q = SO2::from_angle(&0.3_f64);
+        let identity = SO2::identity();
+        let unit = na::Unit::new_normalize(Vector2::new(1.0, 2.0));
+        assert_eq!(SO2::new(unit).elements(), unit.into_inner());
+        assert!(SO2::<f64>::nans().data().iter().all(|value| value.is_nan()));
+        assert_eq!(q[0], q.w());
+        assert_eq!(q.copy(), q);
+        let mut inverted = q;
+        inverted.invert();
+        assert_eq!(inverted, q.inverse());
+        assert_eq!(q.R(), q.rotation_matrix());
+        assert_eq!(SO2::Exp(&SO2::Log(&q)), q);
+
+        assert_eq!(q * &identity, q);
+        assert_eq!(&q * identity, q);
+        assert_eq!(&q * &identity, q);
+        let mut composed = q;
+        composed *= identity;
+        composed *= &identity;
+        assert_eq!(composed, q);
+
+        let _ = &q * 0.5;
+        let _ = 0.5 * &q;
+        let mut scaled = q;
+        scaled *= 0.5;
+        scaled /= 0.5;
+        let _ = &q / 0.5;
+
+        let vector = Vector2::new(1.0, 2.0);
+        let expected_vector = q * vector;
+        assert_eq!(q * &vector, expected_vector);
+        assert_eq!(&q * vector, expected_vector);
+        assert_eq!(&q * &vector, expected_vector);
+
+        let delta = Vector1::new(0.1);
+        let expected_plus = q + delta;
+        assert_eq!(q + &delta, expected_plus);
+        assert_eq!(&q + delta, expected_plus);
+        assert_eq!(&q + &delta, expected_plus);
+        let mut plus_assign = q;
+        plus_assign += delta;
+        assert_eq!(plus_assign, expected_plus);
+        plus_assign = q;
+        plus_assign += &delta;
+        assert_eq!(plus_assign, expected_plus);
+
+        assert_eq!(expected_plus - &q, delta);
+        assert_eq!(&expected_plus - q, delta);
+        assert_eq!(&expected_plus - &q, delta);
     }
 }

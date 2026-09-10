@@ -1,26 +1,26 @@
-//! Rust implementation of the manifold representations in manif-geom-rs
+//! Lie-group representations for 2D and 3D robotics geometry.
+//!
+//! The crate follows the conventions used by `manif-geom-cpp`: quaternion
+//! coefficients are scalar-first, tangent perturbations are applied on the
+//! right, and `x - y` computes `Log(y.inverse() * x)`.
 
-// use num_traits::Float; TODO remove?
+pub extern crate nalgebra as na;
 
-mod so2;
-mod so3;
+pub mod se2;
+pub mod se3;
+pub mod so2;
+pub mod so3;
 
-// use rand::distributions::{Distribution, Standard};
+pub use se2::SE2;
+pub use se3::SE3;
+pub use so2::SO2;
+pub use so3::SO3;
 
-extern crate nalgebra as na;
-// use na::{Scalar, Unit, Vector1, Vector2, Vector3, Vector4, Vector6, Matrix2};
-
-/*
-Implemented manifold types : Float + na::ComplexField
-struct SE2<T: Scalar + na::ComplexField> {
-    t: Vector2<T>,
-    q: SO2<T>,
-}
-struct SO3<T: Scalar + na::ComplexField> {
-    arr: Unit<Vector4<T>>, // w, x, y, z
-}
-struct SE3<T: Scalar + na::ComplexField> {
-    t: Vector3<T>,
-    q: SO3<T>,
-}
-*/
+/// Double-precision two-dimensional rotation.
+pub type SO2d = SO2<f64>;
+/// Double-precision two-dimensional rigid transform.
+pub type SE2d = SE2<f64>;
+/// Double-precision three-dimensional rotation.
+pub type SO3d = SO3<f64>;
+/// Double-precision three-dimensional rigid transform.
+pub type SE3d = SE3<f64>;
